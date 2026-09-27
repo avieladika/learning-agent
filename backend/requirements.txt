@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+youtube-transcript-api
+google-api-python-client
+chromadb
+sentence-transformers
+transformers
+openai
+python-dotenv
+pydantic
+requests
+yt-dlp
