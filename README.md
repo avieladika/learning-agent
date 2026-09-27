@@ -17,6 +17,35 @@ Finding a specific explanation in long videos takes time. Keyword matches can mi
 
 The application combines keyword and vector retrieval, reranks candidate videos, and expands relevant passages with neighboring transcript chunks. It checks whether the retrieved evidence covers the question and can perform one targeted follow-up retrieval pass before generating an answer.
 
+## Highlights
+
+### Hybrid retrieval: BM25, embeddings, and Reciprocal Rank Fusion
+
+Transcript search combines two complementary signals. SQLite FTS5 ranks lexical matches with BM25, while Chroma retrieves semantically similar passages using cosine distance over `all-MiniLM-L6-v2` sentence embeddings. The application merges their ranked lists using **Reciprocal Rank Fusion (RRF)**: each appearance adds `1 / (60 + rank)` to a passage's score. Rank-based fusion avoids treating BM25 scores and vector distances as directly comparable. Query-expansion coverage and a small video-title ranking boost also influence passage selection.
+
+See [transcript search](backend/storage/transcript_store.py), [vector storage](backend/storage/vector_store.py), and [fusion logic](backend/pipeline/layers/content_layer.py).
+
+### Context expansion and evidence-driven retrieval
+
+Selected passages are expanded with adjacent chunks from the same video, then deduplicated. This preserves explanations that span chunk boundaries. Video candidates can be reranked by the language model, and the orchestrator can request one additional retrieval pass for missing concepts. Explicit video requests remain restricted to that video. Timestamped sources are constructed from the chunks selected for the answer context.
+
+### Token budgeting and conversational follow-ups
+
+Questions, history, transcripts, and answer generation have separate budgets. Follow-up questions are rewritten into standalone queries, while history trimming retains recent complete turns. Token counting uses a locally cached Hugging Face tokenizer when available and a conservative UTF-8-based estimate otherwise. [Regression tests](tests) cover budget limits, source selection, and retrieval boundaries; these checks do not measure answer accuracy.
+
+### Technologies and third-party components
+
+| Component | How it is used |
+| --- | --- |
+| **Chroma + Sentence Transformers** | Persistent title/transcript indexes and local embedding generation with `all-MiniLM-L6-v2`. |
+| **SQLite FTS5** | Canonical transcript storage, lexical search with BM25, and retrieval of neighboring chunks. Accessed through Python's `sqlite3` module. |
+| **Groq + OpenAI Python SDK** | Groq provides model inference; the OpenAI-compatible client handles query analysis, reranking, evidence assessment, and answer generation. |
+| **Hugging Face Transformers** | Loads a cached model tokenizer for request-budget calculations. |
+| **yt-dlp** | Retrieves video metadata and available subtitles for ingestion. |
+| **FastAPI, Pydantic, and Uvicorn** | HTTP endpoints, typed request/data models, and the Python API server. |
+| **SwiftUI, Combine, and AppKit** | Apple's frameworks for the macOS interface, observable application state, and desktop integration. |
+
+
 ## What It Includes
 
 - Video and transcript ingestion with `yt-dlp`.
