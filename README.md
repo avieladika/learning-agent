@@ -1,31 +1,50 @@
 # Learning Agent
 
-A personal learning assistant that answers questions using YouTube video transcripts and presents video sources with timestamps. Includes a Python API and a SwiftUI macOS client.
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
+![SwiftUI](https://img.shields.io/badge/SwiftUI-F05138?style=for-the-badge&logo=swift&logoColor=white)
 
-## Highlights
+**Links:** [Repository](https://github.com/avieladika/learning-agent) · [Pipeline](backend/pipeline/orchestrator.py) · [Tests](tests)
+
+Learning Agent is a personal assistant for exploring knowledge in YouTube videos. It retrieves transcript passages, builds a bounded context, and generates answers with video links and timestamps through a Python API and a SwiftUI macOS client.
+
+## The Challenge
+
+Finding a specific explanation in long videos takes time. Keyword matches can miss related ideas, isolated transcript passages can lose context, and answers without source references are difficult to check.
+
+## The Solution
+
+The application combines keyword and vector retrieval, reranks candidate videos, and expands relevant passages with neighboring transcript chunks. It checks whether the retrieved evidence covers the question and can perform one targeted follow-up retrieval pass before generating an answer.
+
+## What It Includes
 
 - Video and transcript ingestion with `yt-dlp`.
-- Keyword and vector retrieval, followed by video reranking.
-- Neighboring transcript chunks to preserve context.
-- A bounded follow-up retrieval pass when evidence is incomplete.
-- Token budgets for questions, conversation history, transcripts, and answers.
-- Source links grouped by video and timestamp.
-- Focused tests for retrieval boundaries, context selection, and request budgets.
+- SQLite metadata and transcript storage alongside Chroma vector indexes.
+- Query analysis, channel selection, video reranking, and contextual passage retrieval.
+- Explicit budgets for questions, conversation history, transcript context, and answers.
+- FastAPI endpoints and a SwiftUI macOS client.
+- Regression tests for retrieval boundaries, source selection, and token budgets.
 
-## Architecture
+## System Model
+
+Ingestion prepares searchable video and transcript data. Storage modules own persistence, pipeline layers own retrieval and generation, and the API connects the workflow to the desktop client.
+
+## Core Technical Flow
+
+Question → query analysis → channel/video retrieval → transcript context → evidence check → answer and sources.
 
 ```mermaid
 flowchart LR
-    UI[SwiftUI client / HTTP client] --> API[FastAPI]
-    API --> Q[Query analysis]
-    Q --> V[Channel and video retrieval]
-    V --> C[Transcript context]
-    C --> G[Evidence check and generation]
-    G --> UI
-    V <--> S[SQLite and Chroma]
+    Q[Question] --> R[Hybrid retrieval]
+    R --> C[Transcript context]
+    C --> E[Evidence check]
+    E --> A[Answer and timestamped sources]
 ```
 
-The pipeline is in `backend/pipeline`; ingestion and persistence have separate modules. Groq serves the language model through an OpenAI-compatible client.
+## Why This Design
+
+Separate pipeline stages make retrieval decisions easier to inspect. Context windows retain surrounding explanations, while source selection follows the passages that fit the context budget.
 
 ## Run the backend
 
